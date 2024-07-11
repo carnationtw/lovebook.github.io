@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>愛的書庫借書平台</title>
+    <style>
+#borrowingRules { background-color: #f9f9f9; padding: 20px; margin-bottom: 20px; border: 1px solid #ddd; }
+#borrowingRules strong { font-weight: bold; }
+#borrowingRules .red-bold { color: red; font-weight: bold; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1, h2, h3, h4 { color: #333; }
+        form { margin-bottom: 20px; }
+        input, button, select { margin: 5px 0; padding: 5px; }
+        #bookList { border-top: 1px solid #ddd; padding-top: 20px; }
+        .book { background: #f4f4f4; margin-bottom: 20px; padding: 10px; display: flex; }
+        .book-info { flex: 1; }
+        .book-schedule { flex: 1; }
+        .week { margin: 5px 0; }
+        .week button, .week select { margin-left: 10px; }
+        .grade-section { margin-bottom: 30px; padding: 10px; }
+        .grade-section.low { background-color: #e6f3ff; }
+        .grade-section.middle { background-color: #e6ffe6; }
+        .grade-section.high { background-color: #fff0e6; }
+        #borrowingRules { background-color: #f9f9f9; padding: 20px; margin-bottom: 20px; border: 1px solid #ddd; }
+        #borrowingRules strong { font-weight: normal; }
+        #borrowingRules .red-bold { color: red; font-weight: bold; }
+        .book-cover { max-width: 150px; max-height: 200px; margin-right: 10px; float: left; }
+        #gradeButtons { margin-bottom: 20px; }
+        #gradeButtons button { margin-right: 10px; padding: 10px 20px; font-size: 16px; }
+        .borrowed-class { color: red; font-weight: bold; }
+        .status-returned { color: blue; }
+        .status-missing { color: red; }
+        .return-date { font-weight: bold; color: green; }
+        .delete-btn { background-color: #ff4d4d; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+        .edit-btn { background-color: #4CAF50; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>正義國小～愛的書庫借書平台</h1>
+
+    <div id="borrowingRules">
+        <div id="borrowingRules">
+    <h2>新北市正義國小「愛的書庫」借用辦法    正義國小製</h2>
+    <ol>
+        <li>借閱窗口：請至網頁或跟閱推教師預約登記（分機3001或line），請告知要借閱的書目及時間。</li>
+        <li>借閱冊數：書箱數量足夠時，同一週開放借閱1箱以上，只要時間內讀的完皆可登記。</li>
+        <li>借閱時間：每本書借閱時間為<strong class="red-bold">5天</strong>，全班提前閱讀完畢可以歸還。若書籍沒人預約，可續借閱讀。</li>
+        <li>借閱書箱：低年級由圖書館送到班級；中高年級請各班派學生到圖書館領取，每箱皆為30本。</li>
+        <li>歸還書箱：請各班自行歸還圖書館，確認書量、書籍無誤才算歸還完成。</li>
+        <li>書籍遺失賠償辦法：自行購買相同書籍</li>
+        <li>老師可上愛的書庫網頁（<a href="https://trcf.twnread.org.tw/index.aspx" target="_blank">https://trcf.twnread.org.tw/index.aspx</a>）查詢，若有想借的書籍可向閱推老師推薦，圖書館可協助借書。</li>
+        <li>請老師指導孩子珍惜圖書，妥善保管。</li>
+    </ol>
+</div>
+    </div>
+    
+    <form id="addBookForm">
+        <h2>新增書籍</h2>
+        <input type="text" id="bookTitle" placeholder="書名" required>
+        <input type="url" id="bookLink" placeholder="介紹連結" required>
+        <select id="bookGrade" required>
+            <option value="">選擇適讀年級</option>
+            <option value="低年級">低年級</option>
+            <option value="中年級">中年級</option>
+            <option value="高年級">高年級</option>
+        </select>
+        <input type="file" id="bookCover" accept="image/*">
+        <input type="date" id="returnDate" placeholder="書箱應寄回日期" required>
+        <button type="submit">新增書籍</button>
+    </form>
+
+    <div id="gradeButtons">
+        <button onclick="scrollToGrade('低年級')">低年級</button>
+        <button onclick="scrollToGrade('中年級')">中年級</button>
+        <button onclick="scrollToGrade('高年級')">高年級</button>
+    </div>
+
+    <div id="bookList">
+        <h2>書籍列表</h2>
+        <!-- 書籍將在這裡顯示 -->
+    </div>
+
+    <script>
+        class Book {
+            constructor(title, link, grade, coverUrl, returnDate) {
+                this.title = title;
+                this.link = link;
+                this.grade = grade;
+                this.coverUrl = coverUrl;
+                this.returnDate = returnDate;
+                this.addDate = new Date();
+                this.weeks = this.generateWeeks();
+            }
+
+            generateWeeks() {
+                let weeks = [];
+                let currentDate = new Date(this.addDate);
+                currentDate.setDate(currentDate.getDate() + (1 + 7 - currentDate.getDay()) % 7);
+                for (let i = 0; i < 6; i++) {
+                    let endDate = new Date(currentDate);
+                    endDate.setDate(endDate.getDate() + 4);
+                    weeks.push({
+                        startDate: new Date(currentDate),
+                        endDate: endDate,
+                        class: null,
+                        status: null
+                    });
+                    currentDate.setDate(currentDate.getDate() + 7);
+                }
+                return weeks;
+            }
+
+            addWeek() {
+                let lastWeek = this.weeks[this.weeks.length - 1];
+                let newStartDate = new Date(lastWeek.endDate);
+                newStartDate.setDate(newStartDate.getDate() + 3);
+                let newEndDate = new Date(newStartDate);
+                newEndDate.setDate(newEndDate.getDate() + 4);
+                this.weeks.push({
+                    startDate: newStartDate,
+                    endDate: newEndDate,
+                    class: null,
+                    status: null
+                });
+            }
+        }
+
+        class BookLendingPlatform {
+            constructor() {
+                this.books = {
+                    "低年級": {},
+                    "中年級": {},
+                    "高年級": {}
+                };
+            }
+
+            addBook(title, link, grade, coverUrl, returnDate) {
+                if (!(title in this.books[grade])) {
+                    this.books[grade][title] = new Book(title, link, grade, coverUrl, returnDate);
+                    saveData();
+                    return true;
+                }
+                return false;
+            }
+
+            deleteBook(grade, title) {
+                if (title in this.books[grade]) {
+                    delete this.books[grade][title];
+                    saveData();
+                    return true;
+                }
+                return false;
+            }
+
+            lendBook(grade, title, weekIndex, className) {
+                if (title in this.books[grade] && weekIndex >= 0 && weekIndex < this.books[grade][title].weeks.length) {
+                    this.books[grade][title].weeks[weekIndex].class = className;
+                    saveData();
+                    return true;
+                }
+                return false;
+            }
+
+            updateBookStatus(grade, title, weekIndex, status) {
+                if (title in this.books[grade] && weekIndex >= 0 && weekIndex < this.books[grade][title].weeks.length) {
+                    this.books[grade][title].weeks[weekIndex].status = status;
+                    saveData();
+                    return true;
+                }
+                return false;
+            }
+
+            addWeekToBook(grade, title) {
+                if (title in this.books[grade]) {
+                    this.books[grade][title].addWeek();
+                    saveData();
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('bookLendingPlatformData', JSON.stringify(platform.books));
+        }
+
+        const platform = new BookLendingPlatform();
+
+        // 載入保存的數據
+        const savedData = localStorage.getItem('bookLendingPlatformData');
+        if (savedData) {
+            const parsedData = JSON.parse(savedData);
+            for (const grade in parsedData) {
+                for (const title in parsedData[grade]) {
+                    const book = parsedData[grade][title];
+                    platform.addBook(book.title, book.link, book.grade, book.coverUrl, book.returnDate);
+                    platform.books[grade][title].weeks = book.weeks;
+                }
+            }
+        }
+
+        function formatDateRange(startDate, endDate) {
+            const options = { month: 'numeric', day: 'numeric' };
+            return `${new Date(startDate).toLocaleDateString('zh-TW', options)}~${new Date(endDate).toLocaleDateString('zh-TW', options)}`;
+        }
+
+        function updateBookList() {
+            const bookList = document.getElementById('bookList');
+            bookList.innerHTML = '<h2>書籍列表</h2>';
+
+            const gradeClasses = {
+                "低年級": "low",
+                "中年級": "middle",
+                "高年級": "high"
+            };
+
+            for (const [grade, gradeClass] of Object.entries(gradeClasses)) {
+                const gradeSection = document.createElement('div');
+                gradeSection.className = `grade-section ${gradeClass}`;
+                gradeSection.id = `grade-${grade}`;
+                gradeSection.innerHTML = `<h3>${grade}</h3>`;
+
+                const books = Object.entries(platform.books[grade]);
+                books.sort((a, b) => new Date(b[1].addDate) - new Date(a[1].addDate)); // 按添加日期降序排序
+
+                for (const [title, book] of books) {
+                    const bookElement = document.createElement('div');
+                    bookElement.className = 'book';
+                    let weeksHTML = '';
+                    book.weeks.forEach((week, index) => {
+                        weeksHTML += `
+                            <div class="week">
+                                ${formatDateRange(week.startDate, week.endDate)}: 
+                                ${week.class ? `
+                                    已被<span class="borrowed-class">${week.class}</span>借閱
+                                    <button onclick="editBorrowing('${grade}', '${title}', ${index})">修改</button>
+                                ` : `
+                                    <input type="text" placeholder="輸入班級" id="class-${grade}-${title}-${index}">
+                                    <button onclick="lendBook('${grade}', '${title}', ${index})">借閱</button>
+                                `}
+                                <select onchange="updateStatus('${grade}', '${title}', ${index}, this.value)">
+                                    <option value="">選擇狀態</option>
+                                    <option value="已還書">已還書</option>
+                                    <option value="缺書">缺書</option>
+                                </select>
+                                ${week.status ? `<span class="status-${week.status === '已還書' ? 'returned' : 'missing'}">(${week.status})</span>` : ''}
+                            </div>
+                        `;
+                    });
+                    bookElement.innerHTML = `
+                        <div class="book-info">
+                            <img src="${book.coverUrl}" alt="${book.title}" class="book-cover">
+                            <h4><a href="${book.link}" target="_blank">${book.title}</a></h4>
+                            <p class="return-date">書箱應寄回日期：${book.returnDate}</p>
+                            <button onclick="addWeekToBook('${grade}', '${title}')">增加週次</button>
+                            <button class="delete-btn" onclick="deleteBook('${grade}', '${title}')">刪除書籍</button>
+                        </div>
+                        <div class="book-schedule">
+                            <h5>借閱時間表：</h5>
+                            ${weeksHTML}
+                        </div>
+                    `;
+                    gradeSection.appendChild(bookElement);
+                }
+
+                bookList.appendChild(gradeSection);
+            }
+        }
+
+        function scrollToGrade(grade) {
+            const element = document.getElementById(`grade-${grade}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        document.getElementById('addBookForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const title = document.getElementById('bookTitle').value;
+            const link = document.getElementById('bookLink').value;
+            const grade = document.getElementById('bookGrade').value;
+            const returnDate = document.getElementById('returnDate').value;
+            const coverFile = document.getElementById('bookCover').files[0];
+
+            if (grade && coverFile && returnDate) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const coverUrl = event.target.result;
+                    if (platform.addBook(title, link, grade, coverUrl, returnDate)) {
+                        alert('書籍新增成功！');
+                        updateBookList();
+                    } else {
+                        alert('書籍已存在！');
+                    }
+                };
+                reader.readAsDataURL(coverFile);
+                this.reset();
+            } else {
+                alert('請填寫所有必要資訊並上傳封面圖片！');
+            }
+        });
+
+        function lendBook(grade, title, weekIndex) {
+            const className = document.getElementById(`class-${grade}-${title}-${weekIndex}`).value;
+            if (className) {
+                if (platform.lendBook(grade, title, weekIndex, className)) {
+                    alert('借閱成功！');
+                    updateBookList();
+                } else {
+                    alert('借閱失敗！該週可能已被借出。');
+                }
+            } else {
+                alert('請輸入班級！');
+            }
+        }
+
+        function updateStatus(grade, title, weekIndex, status) {
+            if (platform.updateBookStatus(grade, title, weekIndex, status)) {
+                updateBookList();
+            }
+        }
+
+        function addWeekToBook(grade, title) {
+            if (platform.addWeekToBook(grade, title)) {
+                updateBookList();
+            }
+        }
+
+        function deleteBook(grade, title) {
+            if (confirm(`確定要刪除 ${title} 嗎？`)) {
+                if (platform.deleteBook(grade, title)) {
+                    alert('書籍已成功刪除！');
+                    updateBookList();
+                } else {
+                    alert('刪除失敗！書籍可能不存在。');
+                }
+            }
+        }
+
+        function editBorrowing(grade, title, weekIndex) {
+            const currentClass = platform.books[grade][title].weeks[weekIndex].class;
+            const newClass = prompt(`請輸入新的借閱班級（當前：${currentClass}）：`, currentClass);
+            if (newClass !== null && newClass !== currentClass) {
+                if (platform.lendBook(grade, title, weekIndex, newClass)) {
+                    alert('借閱資訊已更新！');
+                    updateBookList();
+                } else {
+                    alert('更新失敗！');
+                }
+            }
+        }
+
+        // 初始化頁面
+        updateBookList();
+    </script>
+</body>
+</html>
